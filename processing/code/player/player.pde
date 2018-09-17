@@ -9,20 +9,39 @@ Minim minim;
 ArrayList<AudioPlayer> players = new ArrayList();
 
 String[] filenames = {
-"basson_1.mp3",
-"oboe_1.mp3",
-"oboe_2.mp3",
-"steinway_piano_1.mp3",
-"string_1.mp3",
-"string_2.mp3",
-"string_3.mp3",
-"string_4.mp3",
-//"string_5.mp3",
-//"string_6.mp3",
-//"string_7.mp3",
-//"string_8.mp3",
-//"string_9.mp3"
+"poruka/1.mp3",
+"poruka/2.mp3",
+"poruka/3.mp3",
+"poruka/4.mp3",
+"poruka/5.mp3",
+"poruka/6.mp3",
+"poruka/7.mp3",
+"poruka/8.mp3"
 };
+
+//String[] filenames = {
+//"kageki/1.mp3",
+//"kageki/2.mp3",
+//"kageki/3.mp3",
+//"kageki/4.mp3",
+//"kageki/5.mp3"
+//};
+
+// String[] filenames = {
+// "sample/basson_1.mp3",
+// "sample/oboe_1.mp3",
+// "sample/oboe_2.mp3",
+// "sample/steinway_piano_1.mp3",
+// "sample/string_1.mp3",
+// "sample/string_2.mp3",
+// "sample/string_3.mp3",
+// "sample/string_4.mp3",
+// //"string_5.mp3",
+// //"string_6.mp3",
+// //"string_7.mp3",
+// //"string_8.mp3",
+// //"string_9.mp3"
+// };
 
 String[] serial_ports;
 
