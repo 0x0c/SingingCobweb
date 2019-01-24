@@ -3,6 +3,6 @@
 ## Setting up
 ### Processing
 
-- controlP5とminimをProcessingにインストールする
+- [controlP5](http://www.sojamo.de/libraries/controlP5/)と[minim](http://code.compartmental.net/minim/)をProcessingにインストールする
 
 メニューバーの`Sketch > ImportLibrary > addLibrary`からインストールする。
