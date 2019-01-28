@@ -72,6 +72,16 @@ void setup()
     player.pause();
     players.add(player);
   }
+  
+  for (int i = 0; i < filenames.length; i++) {
+    cp5.addToggle(str(i))
+      .setValue(false)
+      .setLabel(str(i))
+      .setPosition((i * 40), 180)
+      .setSize(40, 40)
+      ;
+  }
+
 }
 
 public void play()
@@ -80,6 +90,7 @@ public void play()
   for (int i = 0; i < players.size(); i++) {
     AudioPlayer player = players.get(i);
     player.play();
+    player.mute();
   }
 }
 
@@ -93,37 +104,63 @@ void dropdown(int n) {
   cp5.get(ScrollableList.class, "dropdown").getItem(n).put("color", c);
 }
 
+int debugStatus = 0x00;
+void controlEvent(ControlEvent theEvent) {
+  if (theEvent.isAssignableFrom(Toggle.class)) {
+    int index = Integer.parseInt(theEvent.getName());
+    int flag = theEvent.getValue() == 1 ? 0x01 : 0x00;
+    if (flag > 0) {
+       // change to 1
+       debugStatus |= (0x01 << index);
+    }
+    else {
+      // change to 0
+      debugStatus &= ~(0x01 << index);
+    }
+    println("on: " + str(index) + " -> " + binary(debugStatus));
+    updatePlayerState(debugStatus);
+  }
+}
+
+void updatePlayerState(int inByte)
+{
+  int flag = 0x01;
+  for (int i = 0; i < 8; i++) {
+    boolean touched = (flag & inByte) > 0;
+    flag = flag << 1;
+    if (i == 1 || i == 3 || i == 5 || i == 7) {
+      // skip 1, 3, 5, 7
+      // still mute
+      continue;
+    }
+
+    for (int j = 0; j < 2; j++) {
+      AudioPlayer player = players.get(i + j);
+      if (touched) {
+        // unmute
+        if (player.isMuted() == true) {
+          println("unmute: " + str(i + j));
+          player.unmute();
+        }
+      }
+      else {
+        // mute
+        if (player.isMuted() == false) {
+          println("mute: " + str(i + j));
+          player.mute();
+        }
+      }
+    }
+  }
+}
+
 void serialEvent(Serial p)
 {
   try {
     int inByte = p.read();
     println(inByte);
     // mute or unmute a player depends on the serial data.
-    int flag = 0x01;
-    for (int i = 0; i < 8; i++) {
-      println(i + " " + binary(flag));
-      boolean touched = (flag & inByte) > 1;
-      flag = flag << 1;
-      if (i == 1 || i == 3 || i == 5 || i == 7) {
-        continue;
-      }
-      
-      for (int j = 0; j < 2; j++) {
-        AudioPlayer player = players.get(i+j);
-        if (touched) {
-          // unmute
-          if (player.isMuted() == true) {
-            player.unmute();
-          }
-        }
-        else {
-          // mute
-          if (player.isMuted() == false) {
-            player.mute();
-          }
-        }
-      }
-    }
+    updatePlayerState(inByte);
   }
   catch(RuntimeException e) {
     e.printStackTrace();
