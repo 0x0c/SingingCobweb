@@ -101,22 +101,28 @@ void serialEvent(Serial p)
     // mute or unmute a player depends on the serial data.
     int flag = 0x01;
     for (int i = 0; i < 8; i++) {
-
       println(i + " " + binary(flag));
-      AudioPlayer player = players.get(i);
-      if ((flag & inByte) > 1) {
-        // unmute
-        if (player.isMuted() == true) {
-          player.unmute();
-        }
-      }
-      else {
-        // mute
-        if (player.isMuted() == false) {
-          player.mute();
-        }
-      }
+      boolean touched = (flag & inByte) > 1;
       flag = flag << 1;
+      if (i == 1 || i == 3 || i == 5 || i == 7) {
+        continue;
+      }
+      
+      for (int j = 0; j < 2; j++) {
+        AudioPlayer player = players.get(i+j);
+        if (touched) {
+          // unmute
+          if (player.isMuted() == true) {
+            player.unmute();
+          }
+        }
+        else {
+          // mute
+          if (player.isMuted() == false) {
+            player.mute();
+          }
+        }
+      }
     }
   }
   catch(RuntimeException e) {
