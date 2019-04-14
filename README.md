@@ -1,4 +1,4 @@
-# Singing Cobweb
+# Singing Cobweb  唄う蜘蛛の巣
 
 ![Thumbnail](asset/image.png)
 
