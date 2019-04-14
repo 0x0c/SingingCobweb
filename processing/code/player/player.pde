@@ -45,43 +45,134 @@ String[] filenames = {
 
 String[] serial_ports;
 
+int user_interface_window_height = 350;
+int user_interface_left_pane_width = 300;
+int user_interface_right_pane_width = 400;
+int user_interface_size = 20;
+int user_interface_offset = 18;
+int vertical_position = 0;
+int horizontal_position = 0;
+
+void resetInterfacePosition()
+{
+  vertical_position = 0;
+  horizontal_position = 0;
+}
+
+void breakInterfaceVerticalPosition(int position)
+{
+  vertical_position += position + user_interface_offset;
+  horizontal_position = 0;
+}
+
+void breakInterfaceVerticalPosition()
+{
+  breakInterfaceVerticalPosition(user_interface_size);
+}
+
+void updateInterfaceHorizontalPosition(int user_interface_width)
+{
+  horizontal_position += user_interface_width;
+}
+
+Textlabel playbackTimeLabel;
+Textlabel remainingTimeLabel;
+Textarea consoleTextArea;
+ArrayList<Textlabel> labels = new ArrayList();
+
 void setup()
 {
-  size(700, 400);
-  
-  serial_ports = Serial.list();
-  cp5 = new ControlP5(this);
-  cp5.addScrollableList("dropdown")
-     .setPosition(100, 100)
-     .setSize(200, 100)
-     .setBarHeight(20)
-     .setItemHeight(20)
-     .addItems(serial_ports)
-     // .setType(ScrollableList.LIST) // currently supported DROPDOWN and LIST
-     ;
+  size(700, 350);
     
   minim = new Minim(this);
-  
-  cp5.addButton("play")
-     .setPosition(0,100)
-     .setSize(50, 19)
-     ;
-     
   for (int i = 0; i < filenames.length; i++) {
     AudioPlayer player = minim.loadFile("mp3/"+filenames[i]);
     player.pause();
     players.add(player);
   }
+
+  cp5 = new ControlP5(this);
   
+  cp5.addButton("play")
+    .setPosition(0, 0)
+    .setSize(50, user_interface_size);
+  updateInterfaceHorizontalPosition(50);
+
+  int time_silder_width = user_interface_left_pane_width - horizontal_position;
+  cp5.addSlider("time")
+    .setPosition(horizontal_position, vertical_position + 15)
+    .setSize(time_silder_width, 5)
+    .setRange(0, 100);
+  cp5.getController("time").getCaptionLabel().setVisible(false);
+  cp5.getController("time").getValueLabel().setVisible(false);
+
+  playbackTimeLabel = new Textlabel(cp5, "0:00", horizontal_position, vertical_position + 3, user_interface_size, user_interface_size);
+  labels.add(playbackTimeLabel);
+  updateInterfaceHorizontalPosition(user_interface_size);
+  
+  remainingTimeLabel = new Textlabel(cp5, "-0:00", user_interface_left_pane_width - user_interface_size * 2, vertical_position + 3, user_interface_size, user_interface_size);
+  labels.add(remainingTimeLabel);
+
+  // draw progress line
+  // line(30, 20, 85, 75)
+  breakInterfaceVerticalPosition();
+
+  // cp5.addCheckBox("loop_checkbox")
+  //   .setPosition(horizontal_position, vertical_position)
+  //   .setSize(user_interface_size, user_interface_size)
+  //   .addItem("loop", 0);
+  // updateInterfaceHorizontalPosition(user_interface_size);
+
+  // sensitivity
+  // cp5.addSlider("sensitivity")
+  //   .setPosition(0, vertical_position)
+  //   .setSize(200, user_interface_size)
+  //   .setRange(0, 7)
+  //   .setNumberOfTickMarks(8);
+  // updateInterfaceHorizontalPosition(200);
+
+  // debug switch  
+  Textlabel toggle_label = new Textlabel(cp5, "Override Sensor State", horizontal_position, vertical_position - 10, user_interface_size, user_interface_size);
+  labels.add(toggle_label);
   for (int i = 0; i < filenames.length; i++) {
-    cp5.addToggle(str(i))
+    String label = str(i);
+    cp5.addToggle(label)
       .setValue(false)
-      .setLabel(str(i))
-      .setPosition((i * 40), 180)
-      .setSize(40, 40)
-      ;
+      .setLabel(label)
+      .setPosition(horizontal_position, vertical_position + (i * user_interface_size))
+      .setSize(user_interface_size, user_interface_size);
+      cp5.getController(label).getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER).setPaddingX(0);
   }
 
+  breakInterfaceVerticalPosition(user_interface_size * filenames.length);
+
+  // serial
+  serial_ports = Serial.list();
+  cp5.addScrollableList("serial_port")
+    .setPosition(0, vertical_position)
+    .setSize(user_interface_left_pane_width, 100)
+    .setBarHeight(user_interface_size)
+    .setItemHeight(user_interface_size)
+    .addItems(serial_ports);
+    // .setType(ScrollableList.LIST) // currently supported DROPDOWN and LIST
+
+  breakInterfaceVerticalPosition();
+  updateInterfaceHorizontalPosition(user_interface_left_pane_width);
+  int button_height = user_interface_size + 10;
+  consoleTextArea = cp5.addTextarea("console")
+    .setPosition(horizontal_position, 0)
+    .setSize(user_interface_right_pane_width, user_interface_window_height - button_height)
+    .setFont(createFont("arial", 12))
+    .setLineHeight(14)
+    .setColor(color(128))
+    .setColorBackground(color(255, 100))
+    .setColorForeground(color(255, 100));
+  cp5.addToggle("stop_console")
+    .setValue(false)
+    .setLabel("Stop Console")
+    .setPosition(user_interface_left_pane_width, user_interface_window_height - button_height)
+    .setSize(user_interface_right_pane_width, button_height);
+  cp5.getController("stop_console").getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER).setPaddingX(0);
 }
 
 public void play()
@@ -89,24 +180,39 @@ public void play()
   println("play");
   for (int i = 0; i < players.size(); i++) {
     AudioPlayer player = players.get(i);
-    player.play();
+    player.loop();
     player.mute();
   }
 }
 
-void dropdown(int n) {
+void serial_port(int n) {
   /* request the selected item based on index n */
   String port_name = serial_ports[n];
   port = new Serial(this, port_name, 9600);
   
   CColor c = new CColor();
-  c.setBackground(color(255,0,0));
-  cp5.get(ScrollableList.class, "dropdown").getItem(n).put("color", c);
+  c.setBackground(color(255, 0, 0));
+  cp5.get(ScrollableList.class, "serial_port").getItem(n).put("color", c);
+}
+
+boolean console_printable = true;
+void stop_console(boolean flag) {
+  console_printable = flag;
+}
+
+void updateConsole(String text) {
+  if (console_printable) {
+    consoleTextArea.setText(consoleTextArea.getText() + "> " + text + "\n");
+  }
 }
 
 int debugStatus = 0x00;
 void controlEvent(ControlEvent theEvent) {
+  // Toggle
   if (theEvent.isAssignableFrom(Toggle.class)) {
+    if (theEvent.getName() == "stop_console") {
+      return;
+    }
     int index = Integer.parseInt(theEvent.getName());
     int flag = theEvent.getValue() == 1 ? 0x01 : 0x00;
     if (flag > 0) {
@@ -157,19 +263,56 @@ void updatePlayerState(int inByte)
 void serialEvent(Serial p)
 {
   try {
-    int inByte = p.read();
-    println(inByte);
-    // mute or unmute a player depends on the serial data.
-    updatePlayerState(inByte);
+    int receivedByte = p.read();
+    String byteString = String.format("%8s", Integer.toBinaryString(receivedByte & 0xFF)).replace(' ', '0');
+    updateConsole(byteString);
+    updatePlayerState(receivedByte);
   }
   catch(RuntimeException e) {
     e.printStackTrace();
   }
 }
 
+void draw_wave()
+{
+  // draw wave
+  resetInterfacePosition();
+  breakInterfaceVerticalPosition();
+  int wave_height = user_interface_size;
+  int wave_position_y = vertical_position + user_interface_size / 2;
+  for (int i = 0; i < players.size(); i++) {
+    AudioPlayer player = players.get(i);
+    // for(int j = 0; j < player.bufferSize() - 1; j++) {
+    for(int j = 0; j < user_interface_left_pane_width - 1; j++) {
+      stroke(65, 105, 225);
+      line(j, wave_position_y + player.left.get(j) * wave_height + (wave_height * i), j + 1, wave_position_y + player.left.get(j + 1) * wave_height + (wave_height * i));
+      stroke(255, 69, 0);
+      line(j, wave_position_y + player.right.get(j) * wave_height + (wave_height * i), j + 1, wave_position_y + player.right.get(j + 1) * wave_height + (wave_height * i));
+    }
+  }
+}
+
 void draw()
 {
   background(0);
+  for (int i = 0; i < labels.size(); i++) {
+    Textlabel label = labels.get(i);
+    label.draw(this);
+  }
+  AudioPlayer player = players.get(0);
+  float position = (float)player.position() / (float)player.length();
+  cp5.getController("time").setValue(position * 100);
+
+  int playbackTime = player.position() / 1000;
+  String playbackMin = String.format("%02d", playbackTime / 60);
+  String playbackSec = String.format("%02d", playbackTime % 60);
+  playbackTimeLabel.setText(playbackMin + ":" + playbackSec);
+
+  int remainingTime = (player.length() - player.position()) / 1000;
+  String remainingMin = String.format("%02d", remainingTime / 60);
+  String remainingSec = String.format("%02d", remainingTime % 60);
+  remainingTimeLabel.setText("-" + remainingMin + ":" + remainingSec);
+  draw_wave();
 }
  
 void stop()
