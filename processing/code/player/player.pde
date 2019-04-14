@@ -1,6 +1,7 @@
 import ddf.minim.*;
 import processing.serial.*;
 import controlP5.*;
+import java.util.Date;
 
 ControlP5 cp5;
 Serial port;
@@ -79,6 +80,8 @@ Textlabel playbackTimeLabel;
 Textlabel remainingTimeLabel;
 Textarea consoleTextArea;
 ArrayList<Textlabel> labels = new ArrayList();
+boolean[] currentState = new boolean[8];
+float[] gains = new float[8];
 
 void setup()
 {
@@ -89,6 +92,8 @@ void setup()
     AudioPlayer player = minim.loadFile("mp3/"+filenames[i]);
     player.pause();
     players.add(player);
+    gains[i] = -80;
+    player.setGain(0);
   }
 
   cp5 = new ControlP5(this);
@@ -139,9 +144,9 @@ void setup()
     cp5.addToggle(label)
       .setValue(false)
       .setLabel(label)
-      .setPosition(horizontal_position, vertical_position + (i * user_interface_size))
+      .setPosition(horizontal_position + 20, vertical_position + (i * user_interface_size))
       .setSize(user_interface_size, user_interface_size);
-      cp5.getController(label).getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER).setPaddingX(0);
+    cp5.getController(label).getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER).setPaddingX(0);
   }
 
   breakInterfaceVerticalPosition(user_interface_size * filenames.length);
@@ -173,19 +178,22 @@ void setup()
     .setPosition(user_interface_left_pane_width, user_interface_window_height - button_height)
     .setSize(user_interface_right_pane_width, button_height);
   cp5.getController("stop_console").getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER).setPaddingX(0);
+
+  stop_console(false);
 }
 
 public void play()
 {
-  println("play");
+  printConsole("play");
   for (int i = 0; i < players.size(); i++) {
     AudioPlayer player = players.get(i);
     player.loop();
-    player.mute();
+    player.setGain(0);
   }
 }
 
-void serial_port(int n) {
+void serial_port(int n)
+{
   /* request the selected item based on index n */
   String port_name = serial_ports[n];
   port = new Serial(this, port_name, 9600);
@@ -195,19 +203,27 @@ void serial_port(int n) {
   cp5.get(ScrollableList.class, "serial_port").getItem(n).put("color", c);
 }
 
-boolean console_printable = true;
-void stop_console(boolean flag) {
-  console_printable = flag;
+boolean stop_console = true;
+void stop_console(boolean flag)
+{
+  stop_console = flag;
+  if (stop_console) {
+    Date date = new Date();
+    consoleTextArea.setText(consoleTextArea.getText() + date.toString() + "> " + "stop console" + "\n");
+  }
 }
 
-void updateConsole(String text) {
-  if (console_printable) {
-    consoleTextArea.setText(consoleTextArea.getText() + "> " + text + "\n");
+void printConsole(String text)
+{
+  if (stop_console == false) {
+    Date date = new Date();
+    consoleTextArea.setText(consoleTextArea.getText() + date.toString() + "> " + text + "\n");
   }
 }
 
 int debugStatus = 0x00;
-void controlEvent(ControlEvent theEvent) {
+void controlEvent(ControlEvent theEvent)
+{
   // Toggle
   if (theEvent.isAssignableFrom(Toggle.class)) {
     if (theEvent.getName() == "stop_console") {
@@ -223,37 +239,45 @@ void controlEvent(ControlEvent theEvent) {
       // change to 0
       debugStatus &= ~(0x01 << index);
     }
-    println("on: " + str(index) + " -> " + binary(debugStatus));
+
     updatePlayerState(debugStatus);
   }
 }
 
 void updatePlayerState(int inByte)
 {
+  for (int i = 0; i < 8; i++) {
+    currentState[i] = false;
+  }
   int flag = 0x01;
   for (int i = 0; i < 8; i++) {
     boolean touched = (flag & inByte) > 0;
     flag = flag << 1;
+    currentState[i] = touched;
+
     if (i == 1 || i == 3 || i == 5 || i == 7) {
       // skip 1, 3, 5, 7
       // still mute
       continue;
     }
 
+    int transitionDuration = 500;
     for (int j = 0; j < 2; j++) {
       AudioPlayer player = players.get(i + j);
       if (touched) {
         // unmute
-        if (player.isMuted() == true) {
-          println("unmute: " + str(i + j));
-          player.unmute();
+        if (player.getGain() < 0) {
+          printConsole("unmute: " + str(i + j));
+          // player.unmute();
+          player.shiftGain(-80, 10, transitionDuration);
         }
       }
       else {
         // mute
-        if (player.isMuted() == false) {
-          println("mute: " + str(i + j));
-          player.mute();
+        if (player.getGain() >= 0) {
+          printConsole("mute: " + str(i + j));
+          // player.mute();
+          player.shiftGain(10, -80, transitionDuration);
         }
       }
     }
@@ -265,7 +289,7 @@ void serialEvent(Serial p)
   try {
     int receivedByte = p.read();
     String byteString = String.format("%8s", Integer.toBinaryString(receivedByte & 0xFF)).replace(' ', '0');
-    updateConsole(byteString);
+    printConsole(byteString);
     updatePlayerState(receivedByte);
   }
   catch(RuntimeException e) {
@@ -273,32 +297,50 @@ void serialEvent(Serial p)
   }
 }
 
-void draw_wave()
+void drawWave()
 {
   // draw wave
   resetInterfacePosition();
   breakInterfaceVerticalPosition();
+  int offset = 20;
   int wave_height = user_interface_size;
   int wave_position_y = vertical_position + user_interface_size / 2;
   for (int i = 0; i < players.size(); i++) {
     AudioPlayer player = players.get(i);
     // for(int j = 0; j < player.bufferSize() - 1; j++) {
-    for(int j = 0; j < user_interface_left_pane_width - 1; j++) {
+    for(int j = 0; j < user_interface_left_pane_width - 1 - offset; j++) {
       stroke(65, 105, 225);
-      line(j, wave_position_y + player.left.get(j) * wave_height + (wave_height * i), j + 1, wave_position_y + player.left.get(j + 1) * wave_height + (wave_height * i));
+      line(j + offset, wave_position_y + player.left.get(j) * wave_height + (wave_height * i), j + 1 + offset, wave_position_y + player.left.get(j + 1) * wave_height + (wave_height * i));
       stroke(255, 69, 0);
-      line(j, wave_position_y + player.right.get(j) * wave_height + (wave_height * i), j + 1, wave_position_y + player.right.get(j + 1) * wave_height + (wave_height * i));
+      line(j + offset, wave_position_y + player.right.get(j) * wave_height + (wave_height * i), j + 1 + offset, wave_position_y + player.right.get(j + 1) * wave_height + (wave_height * i));
     }
   }
 }
 
-void draw()
+boolean isTouching(int index)
 {
-  background(0);
-  for (int i = 0; i < labels.size(); i++) {
-    Textlabel label = labels.get(i);
-    label.draw(this);
+  if (index > 8) {
+    return false;
   }
+  return currentState[index];
+}
+
+void drawSensorState()
+{
+  // ellipse
+  for (int i = 0; i < filenames.length; i++) {
+    Toggle toggle = (Toggle)cp5.getController(str(i));
+    if (toggle.getBooleanValue() == true || isTouching(i)) {
+      float[] position = toggle.getPosition();
+      noStroke();
+      fill(255, 0, 0);
+      ellipse(user_interface_size / 2, position[1] + user_interface_size / 2, user_interface_size / 2, user_interface_size / 2);
+    }
+  }
+}
+
+void updatePlaybackTime()
+{
   AudioPlayer player = players.get(0);
   float position = (float)player.position() / (float)player.length();
   cp5.getController("time").setValue(position * 100);
@@ -312,7 +354,18 @@ void draw()
   String remainingMin = String.format("%02d", remainingTime / 60);
   String remainingSec = String.format("%02d", remainingTime % 60);
   remainingTimeLabel.setText("-" + remainingMin + ":" + remainingSec);
-  draw_wave();
+}
+
+void draw()
+{
+  background(0);
+  for (int i = 0; i < labels.size(); i++) {
+    Textlabel label = labels.get(i);
+    label.draw(this);
+  }
+  updatePlaybackTime();
+  drawWave();
+  drawSensorState();
 }
  
 void stop()
