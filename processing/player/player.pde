@@ -81,7 +81,6 @@ Textlabel remainingTimeLabel;
 Textarea consoleTextArea;
 ArrayList<Textlabel> labels = new ArrayList();
 boolean[] currentState = new boolean[8];
-float[] gains = new float[8];
 
 void setup()
 {
@@ -92,8 +91,7 @@ void setup()
     AudioPlayer player = minim.loadFile("mp3/"+filenames[i]);
     player.pause();
     players.add(player);
-    gains[i] = -80;
-    player.setGain(0);
+    player.setGain(-80);
   }
 
   cp5 = new ControlP5(this);
@@ -188,7 +186,7 @@ public void play()
   for (int i = 0; i < players.size(); i++) {
     AudioPlayer player = players.get(i);
     player.loop();
-    player.setGain(0);
+    player.setGain(-80);
   }
 }
 
