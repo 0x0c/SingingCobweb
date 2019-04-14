@@ -1,6 +1,6 @@
 # 蜘蛛の巣
 
-![Thumbnail](https://raw.githubusercontent.com/0x0c/yukkino/master/asset/Screen%20Shot%202019-04-14%20at%2022.56.06.png)
+![Thumbnail](https://raw.githubusercontent.com/0x0c/yukkino/master/asset/image.png)
 
 ## Dependencies
 - [controlP5](http://www.sojamo.de/libraries/controlP5/)
