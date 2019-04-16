@@ -85,6 +85,7 @@ boolean[] currentState = new boolean[8];
 void setup()
 {
   size(700, 350);
+  frame.setTitle("Singing Cobweb");
     
   minim = new Minim(this);
   for (int i = 0; i < filenames.length; i++) {
