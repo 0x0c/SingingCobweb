@@ -276,30 +276,22 @@ void updatePlayerState(int inByte)
     flag = flag << 1;
     currentState[i] = touched;
 
-    if (i == 1 || i == 3 || i == 5 || i == 7) {
-      // skip 1, 3, 5, 7
-      // still mute
-      continue;
-    }
-
     int transitionDuration = 500;
-    for (int j = 0; j < 2; j++) {
-      AudioPlayer player = players.get(i + j);
-      if (touched) {
-        // unmute
-        if (player.getGain() < 0) {
-          printConsole("unmute: " + str(i + j));
-          // player.unmute();
-          player.shiftGain(-80, 10, transitionDuration);
-        }
+    AudioPlayer player = players.get(i);
+    if (touched) {
+      // unmute
+      if (player.getGain() < 0) {
+        printConsole("unmute: " + str(i));
+        // player.unmute();
+        player.shiftGain(-80, 10, transitionDuration);
       }
-      else {
-        // mute
-        if (player.getGain() >= 0) {
-          printConsole("mute: " + str(i + j));
-          // player.mute();
-          player.shiftGain(10, -80, transitionDuration);
-        }
+    }
+    else {
+      // mute
+      if (player.getGain() >= 0) {
+        printConsole("mute: " + str(i));
+        // player.mute();
+        player.shiftGain(10, -80, transitionDuration);
       }
     }
   }
