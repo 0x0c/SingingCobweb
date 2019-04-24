@@ -9,16 +9,38 @@ Serial port;
 Minim minim;
 ArrayList<AudioPlayer> players = new ArrayList();
 
+// String[] filenames = {
+// "Bolero/1.mp3",
+// "Bolero/2.mp3",
+// "Bolero/3.mp3",
+// "Bolero/4.mp3",
+// "Bolero/5.mp3",
+// "Bolero/6.mp3",
+// "Bolero/7.mp3",
+// "Bolero/8.mp3"
+// };
+
 String[] filenames = {
-"poruka/1.mp3",
-"poruka/2.mp3",
-"poruka/3.mp3",
-"poruka/4.mp3",
-"poruka/5.mp3",
-"poruka/6.mp3",
-"poruka/7.mp3",
-"poruka/8.mp3"
+"RhapsodyinBlue/1.mp3",
+"RhapsodyinBlue/2.mp3",
+"RhapsodyinBlue/3.mp3",
+"RhapsodyinBlue/4.mp3",
+"RhapsodyinBlue/5.mp3",
+"RhapsodyinBlue/6.mp3",
+"RhapsodyinBlue/7.mp3",
+"RhapsodyinBlue/8.mp3"
 };
+
+// String[] filenames = {
+// "poruka/1.mp3",
+// "poruka/2.mp3",
+// "poruka/3.mp3",
+// "poruka/4.mp3",
+// "poruka/5.mp3",
+// "poruka/6.mp3",
+// "poruka/7.mp3",
+// "poruka/8.mp3"
+// };
 
 //String[] filenames = {
 //"kageki/1.mp3",
