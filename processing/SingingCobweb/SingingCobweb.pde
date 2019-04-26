@@ -6,7 +6,17 @@ import java.util.Date;
 ControlP5 cp5;
 Serial port;
 
-final String serialConfigFile = "serialconfig.txt";
+boolean export_mode = false;
+
+String macOSPath(String filename)
+{
+  if (export_mode) {
+    return sketchPath("SingingCobweb.app/Contents/Resources/" + filename);
+  }
+  return sketchPath(filename);
+}
+
+final String serialConfigFile = macOSPath("serialconfig.txt");
 int number_of_tracks = 8;
 
 public class Track
@@ -188,6 +198,9 @@ public class Composer
   }
 
   public Composition current_composition() {
+    if (compositions.length <= index_of_current_composition) {
+      return null;
+    }
     return compositions[index_of_current_composition];
   }
 
@@ -239,127 +252,6 @@ Textlabel remainingTimeLabel;
 Textarea consoleTextArea;
 ArrayList<Textlabel> labels = new ArrayList();
 boolean[] currentState = new boolean[number_of_tracks];
-
-void setup()
-{
-  size(700, 350);
-  Minim _minim = new Minim(this);
-  composer = new Composer(
-    new Composition[] {
-      new Composition(new Track[] {
-        new Track("mp3/RhapsodyinBlue/1.mp3", _minim),
-        new Track("mp3/RhapsodyinBlue/2.mp3", _minim),
-        new Track("mp3/RhapsodyinBlue/3.mp3", _minim),
-        new Track("mp3/RhapsodyinBlue/4.mp3", _minim),
-        new Track("mp3/RhapsodyinBlue/5.mp3", _minim),
-        new Track("mp3/RhapsodyinBlue/6.mp3", _minim),
-        new Track("mp3/RhapsodyinBlue/7.mp3", _minim),
-        new Track("mp3/RhapsodyinBlue/8.mp3", _minim)
-      }),
-      new Composition(new Track[] {
-        new Track("mp3/Bolero/1.mp3", _minim),
-        new Track("mp3/Bolero/2.mp3", _minim),
-        new Track("mp3/Bolero/3.mp3", _minim),
-        new Track("mp3/Bolero/4.mp3", _minim),
-        new Track("mp3/Bolero/5.mp3", _minim),
-        new Track("mp3/Bolero/6.mp3", _minim),
-        new Track("mp3/Bolero/7.mp3", _minim),
-        new Track("mp3/Bolero/8.mp3", _minim)
-      })
-  });
-  
-  cp5 = new ControlP5(this);
-  
-  cp5.addButton("play")
-    .setPosition(0, 0)
-    .setSize(50, user_interface_size);
-  updateInterfaceHorizontalPosition(50);
-
-  int time_silder_width = user_interface_left_pane_width - horizontal_position;
-  Slider slider = cp5.addSlider("time")
-    .setPosition(horizontal_position, vertical_position + 15)
-    .setSize(time_silder_width, 5)
-    .setRange(0, 100);
-  slider.getCaptionLabel().setVisible(false);
-  slider.getValueLabel().setVisible(false);
-  slider.onClick(new CallbackListener() {
-    public void controlEvent(CallbackEvent theEvent) {
-      Slider slider = (Slider)theEvent.getController();
-      Composition c = composer.current_composition();
-      c.seek((float)slider.getValue() / 100);
-    }
-  });
-
-  playbackTimeLabel = new Textlabel(cp5, "0:00", horizontal_position, vertical_position + 3, user_interface_size, user_interface_size);
-  labels.add(playbackTimeLabel);
-  updateInterfaceHorizontalPosition(user_interface_size);
-  
-  remainingTimeLabel = new Textlabel(cp5, "-0:00", user_interface_left_pane_width - user_interface_size * 2, vertical_position + 3, user_interface_size, user_interface_size);
-  labels.add(remainingTimeLabel);
-
-  breakInterfaceVerticalPosition();
-
-  // debug switch  
-  Textlabel toggle_label = new Textlabel(cp5, "Override Sensor State", horizontal_position, vertical_position - 10, user_interface_size, user_interface_size);
-  labels.add(toggle_label);
-  for (int i = 0; i < number_of_tracks; i++) {
-    String label = str(i);
-    cp5.addToggle(label)
-      .setValue(false)
-      .setLabel(label)
-      .setPosition(horizontal_position + 20, vertical_position + (i * user_interface_size))
-      .setSize(user_interface_size, user_interface_size);
-    cp5.getController(label).getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER).setPaddingX(0);
-  }
-
-  breakInterfaceVerticalPosition(user_interface_size * number_of_tracks);
-
-  // serial
-  serial_ports = Serial.list();
-  ScrollableList list = cp5.addScrollableList("serial_port")
-    .setPosition(0, vertical_position)
-    .setSize(user_interface_left_pane_width, 100)
-    .setBarHeight(user_interface_size)
-    .setItemHeight(user_interface_size)
-    .addItems(serial_ports);
-  
-  String[] serialConfig = loadStrings(serialConfigFile);
-  if (serialConfig != null && serialConfig.length > 0) {
-    String savedPort = serialConfig[0];
-    // Check if saved port is in available ports.
-    boolean success = false;
-    for (int i = 0; i < serial_ports.length; ++i) {
-      if (serial_ports[i].equals(savedPort)) {
-        list.setValue(i);
-        list.setOpen(false);
-      } 
-    }
-  }
-  else {
-    list.setOpen(true);
-  }
-
-  breakInterfaceVerticalPosition();
-  updateInterfaceHorizontalPosition(user_interface_left_pane_width);
-  int button_height = user_interface_size + 10;
-  consoleTextArea = cp5.addTextarea("console")
-    .setPosition(horizontal_position, 0)
-    .setSize(user_interface_right_pane_width, user_interface_window_height - button_height)
-    .setFont(createFont("arial", 12))
-    .setLineHeight(14)
-    .setColor(color(128))
-    .setColorBackground(color(255, 100))
-    .setColorForeground(color(255, 100));
-  consoleTextArea.scroll(1);
-  cp5.addToggle("stop_console")
-    .setValue(false)
-    .setLabel("Stop Console")
-    .setPosition(user_interface_left_pane_width, user_interface_window_height - button_height)
-    .setSize(user_interface_right_pane_width, button_height);
-  cp5.getController("stop_console").getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER).setPaddingX(0);
-
-  stop_console(false);
-}
 
 public void play()
 {
@@ -542,15 +434,137 @@ void updatePlaybackTime()
   remainingTimeLabel.setText("-" + remainingMin + ":" + remainingSec);
 }
 
+void setup()
+{
+  size(700, 350);
+  Minim _minim = new Minim(this);
+  composer = new Composer(
+    new Composition[] {
+      new Composition(new Track[] {
+       new Track(macOSPath("mp3/RhapsodyinBlue/1.mp3"), _minim),
+       new Track(macOSPath("mp3/RhapsodyinBlue/2.mp3"), _minim),
+       new Track(macOSPath("mp3/RhapsodyinBlue/3.mp3"), _minim),
+       new Track(macOSPath("mp3/RhapsodyinBlue/4.mp3"), _minim),
+       new Track(macOSPath("mp3/RhapsodyinBlue/5.mp3"), _minim),
+       new Track(macOSPath("mp3/RhapsodyinBlue/6.mp3"), _minim),
+       new Track(macOSPath("mp3/RhapsodyinBlue/7.mp3"), _minim),
+       new Track(macOSPath("mp3/RhapsodyinBlue/8.mp3"), _minim)
+      }),
+      new Composition(new Track[] {
+       new Track(macOSPath("mp3/Bolero/1.mp3"), _minim),
+       new Track(macOSPath("mp3/Bolero/2.mp3"), _minim),
+       new Track(macOSPath("mp3/Bolero/3.mp3"), _minim),
+       new Track(macOSPath("mp3/Bolero/4.mp3"), _minim),
+       new Track(macOSPath("mp3/Bolero/5.mp3"), _minim),
+       new Track(macOSPath("mp3/Bolero/6.mp3"), _minim),
+       new Track(macOSPath("mp3/Bolero/7.mp3"), _minim),
+       new Track(macOSPath("mp3/Bolero/8.mp3"), _minim)
+      })
+  });
+  
+  cp5 = new ControlP5(this);
+  
+  cp5.addButton("play")
+    .setPosition(0, 0)
+    .setSize(50, user_interface_size);
+  updateInterfaceHorizontalPosition(50);
+
+  int time_silder_width = user_interface_left_pane_width - horizontal_position;
+  Slider slider = cp5.addSlider("time")
+    .setPosition(horizontal_position, vertical_position + 15)
+    .setSize(time_silder_width, 5)
+    .setRange(0, 100);
+  slider.getCaptionLabel().setVisible(false);
+  slider.getValueLabel().setVisible(false);
+  slider.onClick(new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      Slider slider = (Slider)theEvent.getController();
+      Composition c = composer.current_composition();
+      c.seek((float)slider.getValue() / 100);
+    }
+  });
+
+  playbackTimeLabel = new Textlabel(cp5, "0:00", horizontal_position, vertical_position + 3, user_interface_size, user_interface_size);
+  labels.add(playbackTimeLabel);
+  updateInterfaceHorizontalPosition(user_interface_size);
+  
+  remainingTimeLabel = new Textlabel(cp5, "-0:00", user_interface_left_pane_width - user_interface_size * 2, vertical_position + 3, user_interface_size, user_interface_size);
+  labels.add(remainingTimeLabel);
+
+  breakInterfaceVerticalPosition();
+
+  // debug switch  
+  Textlabel toggle_label = new Textlabel(cp5, "Override Sensor State", horizontal_position, vertical_position - 10, user_interface_size, user_interface_size);
+  labels.add(toggle_label);
+  for (int i = 0; i < number_of_tracks; i++) {
+    String label = str(i);
+    cp5.addToggle(label)
+      .setValue(false)
+      .setLabel(label)
+      .setPosition(horizontal_position + 20, vertical_position + (i * user_interface_size))
+      .setSize(user_interface_size, user_interface_size);
+    cp5.getController(label).getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER).setPaddingX(0);
+  }
+
+  breakInterfaceVerticalPosition(user_interface_size * number_of_tracks);
+
+  // serial
+  serial_ports = Serial.list();
+  ScrollableList list = cp5.addScrollableList("serial_port")
+    .setPosition(0, vertical_position)
+    .setSize(user_interface_left_pane_width, 100)
+    .setBarHeight(user_interface_size)
+    .setItemHeight(user_interface_size)
+    .addItems(serial_ports);
+  
+  String[] serialConfig = loadStrings(serialConfigFile);
+  if (serialConfig != null && serialConfig.length > 0) {
+    String savedPort = serialConfig[0];
+    // Check if saved port is in available ports.
+    boolean success = false;
+    for (int i = 0; i < serial_ports.length; ++i) {
+      if (serial_ports[i].equals(savedPort)) {
+        list.setValue(i);
+        list.setOpen(false);
+      } 
+    }
+  }
+  else {
+    list.setOpen(true);
+  }
+
+  breakInterfaceVerticalPosition();
+  updateInterfaceHorizontalPosition(user_interface_left_pane_width);
+  int button_height = user_interface_size + 10;
+  consoleTextArea = cp5.addTextarea("console")
+    .setPosition(horizontal_position, 0)
+    .setSize(user_interface_right_pane_width, user_interface_window_height - button_height)
+    .setFont(createFont("arial", 12))
+    .setLineHeight(14)
+    .setColor(color(128))
+    .setColorBackground(color(255, 100))
+    .setColorForeground(color(255, 100));
+  consoleTextArea.scroll(1);
+  cp5.addToggle("stop_console")
+    .setValue(false)
+    .setLabel("Stop Console")
+    .setPosition(user_interface_left_pane_width, user_interface_window_height - button_height)
+    .setSize(user_interface_right_pane_width, button_height);
+  cp5.getController("stop_console").getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER).setPaddingX(0);
+
+  stop_console(false);
+}
+
 void draw()
 {
-  background(0);
-  for (int i = 0; i < labels.size(); i++) {
+
+   background(0);
+   for (int i = 0; i < labels.size(); i++) {
     Textlabel label = labels.get(i);
     label.draw(this);
-  }
-  updatePlaybackTime();
-  drawWave();
-  drawSensorState();
-  composer.update();
+   }
+   updatePlaybackTime();
+   drawWave();
+   drawSensorState();
+   composer.update();
 }
