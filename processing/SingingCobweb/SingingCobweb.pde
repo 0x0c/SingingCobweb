@@ -1,4 +1,4 @@
-  import ddf.minim.*;
+import ddf.minim.*;
 import processing.serial.*;
 import controlP5.*;
 import java.util.Date;
@@ -6,6 +6,7 @@ import java.util.Date;
 ControlP5 cp5;
 Serial port;
 
+final String serialConfigFile = "serialconfig.txt";
 int number_of_tracks = 8;
 
 public class Track
@@ -275,20 +276,19 @@ void setup()
   updateInterfaceHorizontalPosition(50);
 
   int time_silder_width = user_interface_left_pane_width - horizontal_position;
-  cp5.addSlider("time")
+  Slider slider = cp5.addSlider("time")
     .setPosition(horizontal_position, vertical_position + 15)
     .setSize(time_silder_width, 5)
     .setRange(0, 100);
-  cp5.getController("time").getCaptionLabel().setVisible(false);
-  cp5.getController("time").getValueLabel().setVisible(false);
-  cp5.getController("time").onClick(new CallbackListener() {
+  slider.getCaptionLabel().setVisible(false);
+  slider.getValueLabel().setVisible(false);
+  slider.onClick(new CallbackListener() {
     public void controlEvent(CallbackEvent theEvent) {
       Slider slider = (Slider)theEvent.getController();
       Composition c = composer.current_composition();
       c.seek((float)slider.getValue() / 100);
     }
   });
-  
 
   playbackTimeLabel = new Textlabel(cp5, "0:00", horizontal_position, vertical_position + 3, user_interface_size, user_interface_size);
   labels.add(playbackTimeLabel);
@@ -316,13 +316,28 @@ void setup()
 
   // serial
   serial_ports = Serial.list();
-  cp5.addScrollableList("serial_port")
+  ScrollableList list = cp5.addScrollableList("serial_port")
     .setPosition(0, vertical_position)
     .setSize(user_interface_left_pane_width, 100)
     .setBarHeight(user_interface_size)
     .setItemHeight(user_interface_size)
     .addItems(serial_ports);
-    // .setType(ScrollableList.LIST) // currently supported DROPDOWN and LIST
+  
+  String[] serialConfig = loadStrings(serialConfigFile);
+  if (serialConfig != null && serialConfig.length > 0) {
+    String savedPort = serialConfig[0];
+    // Check if saved port is in available ports.
+    boolean success = false;
+    for (int i = 0; i < serial_ports.length; ++i) {
+      if (serial_ports[i].equals(savedPort)) {
+        list.setValue(i);
+        list.setOpen(false);
+      } 
+    }
+  }
+  else {
+    list.setOpen(true);
+  }
 
   breakInterfaceVerticalPosition();
   updateInterfaceHorizontalPosition(user_interface_left_pane_width);
@@ -362,11 +377,19 @@ void serial_port(int n)
 {
   /* request the selected item based on index n */
   String port_name = serial_ports[n];
-  port = new Serial(this, port_name, 9600);
-  
-  CColor c = new CColor();
-  c.setBackground(color(255, 0, 0));
-  cp5.get(ScrollableList.class, "serial_port").getItem(n).put("color", c);
+  if (port != null) {
+    port.stop();
+  }
+  try {
+    port = new Serial(this, port_name, 9600);
+    saveStrings(serialConfigFile, new String[] { port_name });
+  }
+  catch (RuntimeException ex) {
+    port = null;
+    printConsole("Error to open the serial port");
+    ScrollableList list = (ScrollableList)cp5.getController("serial_port");
+    list.open();
+  }
 }
 
 boolean stop_console = true;
@@ -421,6 +444,7 @@ void updatePlayerState(int inByte)
     flag = flag << 1;
     currentState[i] = touched;
   }
+  reloadState();
 }
 
 void reloadState()
