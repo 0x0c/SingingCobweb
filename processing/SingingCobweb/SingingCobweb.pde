@@ -13,7 +13,7 @@ String macOSPath(String filename)
   if (export_mode) {
     return sketchPath("SingingCobweb.app/Contents/Resources/" + filename);
   }
-  return sketchPath(filename);
+  return filename;
 }
 
 final String serialConfigFile = macOSPath("serialconfig.txt");
