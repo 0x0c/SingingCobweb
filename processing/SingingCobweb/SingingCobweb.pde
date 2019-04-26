@@ -1,4 +1,4 @@
-import ddf.minim.*;
+  import ddf.minim.*;
 import processing.serial.*;
 import controlP5.*;
 import java.util.Date;
@@ -6,65 +6,200 @@ import java.util.Date;
 ControlP5 cp5;
 Serial port;
 
-Minim minim;
-ArrayList<AudioPlayer> players = new ArrayList();
+int number_of_tracks = 8;
 
-// String[] filenames = {
-// "Bolero/1.mp3",
-// "Bolero/2.mp3",
-// "Bolero/3.mp3",
-// "Bolero/4.mp3",
-// "Bolero/5.mp3",
-// "Bolero/6.mp3",
-// "Bolero/7.mp3",
-// "Bolero/8.mp3"
-// };
+public class Track
+{
+  String filename;
+  AudioPlayer player;
+  public Track(String filename, Minim minim) {
+    this.player = minim.loadFile(filename);
+  }
 
-String[] filenames = {
-"RhapsodyinBlue/1.mp3",
-"RhapsodyinBlue/2.mp3",
-"RhapsodyinBlue/3.mp3",
-"RhapsodyinBlue/4.mp3",
-"RhapsodyinBlue/5.mp3",
-"RhapsodyinBlue/6.mp3",
-"RhapsodyinBlue/7.mp3",
-"RhapsodyinBlue/8.mp3"
-};
+  public void seek(float position) {
+    pause();
+    player.cue((int)(position * length()));
+    play();
+  }
 
-// String[] filenames = {
-// "poruka/1.mp3",
-// "poruka/2.mp3",
-// "poruka/3.mp3",
-// "poruka/4.mp3",
-// "poruka/5.mp3",
-// "poruka/6.mp3",
-// "poruka/7.mp3",
-// "poruka/8.mp3"
-// };
+  public boolean isPlaying() {
+    return player.isPlaying();
+  }
 
-//String[] filenames = {
-//"kageki/1.mp3",
-//"kageki/2.mp3",
-//"kageki/3.mp3",
-//"kageki/4.mp3",
-//"kageki/5.mp3"
-//};
+  public void play() {
+    player.play();
+  }
 
-// String[] filenames = {
-// "sample/basson_1.mp3",
-// "sample/oboe_1.mp3",
-// "sample/oboe_2.mp3",
-// "sample/steinway_piano_1.mp3",
-// "sample/string_1.mp3",
-// "sample/string_2.mp3",
-// "sample/string_3.mp3",
-// "sample/string_4.mp3",
-// //"string_5.mp3",
-// //"string_6.mp3",
-// //"string_7.mp3",
-// //"string_8.mp3",
-// //"string_9.mp3"
-// };
+  public void pause() {
+    player.pause();
+  }
+
+  public void stop() {
+    pause();
+    player.rewind();
+  }
+
+  public void setGain(int gain) {
+    player.setGain(gain);
+  }
+
+  public int length() {
+    return player.length();
+  }
+
+  public int position() {
+    return player.position();
+  }
+
+  public boolean isMute() {
+    return player.getGain() >= 0 ? false : true;
+  }
+
+  public void shiftGain(float from, float to, int duration) {
+    player.shiftGain(from, to, duration);
+  }
+
+  public void mute() {
+    if (isMute() == false) {
+      shiftGain(player.getGain(), -80, 800);
+    }
+  }
+
+  public void unmute() {
+    if (isMute() == true) {
+      shiftGain(player.getGain(), 0, 400);
+    }
+  }
+}
+
+public class Composition
+{
+  Track representative_track;
+  Track[] tracks;
+  int length = 0;
+
+  public Composition(Track[] tracks) {
+    this.tracks = tracks;
+    for (int i = 0; i < tracks.length; i++) {
+      Track t = tracks[i];
+      if (length < t.length()) {
+        representative_track = t;
+        length = t.length();
+      }
+    }
+  }
+
+
+  public void seek(float position) {
+    for (int i = 0; i < tracks.length; i++) {
+      Track t = tracks[i];
+      t.seek(position);
+    }
+  }
+
+  public boolean isPlaying() {
+    return representative_track.isPlaying();
+  }
+
+  public void play() {
+    for (int i = 0; i < tracks.length; i++) {
+      Track t = tracks[i];
+      t.play();
+    }
+  }
+
+  public void pause() {
+    for (int i = 0; i < tracks.length; i++) {
+      Track t = tracks[i];
+      t.pause();
+    }
+  }
+
+  public void stop() {
+    pause();
+    for (int i = 0; i < tracks.length; i++) {
+      Track t = tracks[i];
+      t.stop();
+    }
+  }
+
+  public Track track(int index) {
+    return tracks[index];
+  }
+
+  public Track[] all_track() {
+    return tracks;
+  }
+
+  public int length() {
+    return length;
+  }
+
+  public int position() {
+    return representative_track.position();
+  }
+}
+
+public class Composer
+{
+  Composition[] compositions;
+  public Composer(Composition[] compositions) {
+    this.compositions = compositions;
+  }
+
+  int index_of_current_composition = 0;
+
+  public boolean isPlaying() {
+    return current_composition().isPlaying();
+  }
+  
+  public void start() {
+    Composition c = compositions[index_of_current_composition];
+    c.play();
+  }
+  
+  public void pause() {
+    Composition c = compositions[index_of_current_composition];
+    c.pause();
+  }
+
+  public void stop() {
+    Composition c = compositions[index_of_current_composition];
+    c.stop();
+  }
+
+  public void next() {
+    this.stop();
+    index_of_current_composition += 1;
+    index_of_current_composition %= compositions.length;
+    this.start();
+  }
+
+  public void previous() {
+    this.stop();
+    index_of_current_composition -= 1;
+    index_of_current_composition = max(index_of_current_composition, 0);
+    this.start();
+  }
+
+  public Composition composition(int index) {
+    return compositions[index];
+  }
+
+  public Composition current_composition() {
+    return compositions[index_of_current_composition];
+  }
+
+  public void update() {
+    Composition c = current_composition();
+    if (c.position() + 1 >= c.length()) {
+      // play next
+      next();
+    }
+  }
+}
+
+Composer composer;
 
 String[] serial_ports;
 
@@ -102,21 +237,36 @@ Textlabel playbackTimeLabel;
 Textlabel remainingTimeLabel;
 Textarea consoleTextArea;
 ArrayList<Textlabel> labels = new ArrayList();
-boolean[] currentState = new boolean[8];
+boolean[] currentState = new boolean[number_of_tracks];
 
 void setup()
 {
   size(700, 350);
-  frame.setTitle("Singing Cobweb");
-    
-  minim = new Minim(this);
-  for (int i = 0; i < filenames.length; i++) {
-    AudioPlayer player = minim.loadFile("mp3/"+filenames[i]);
-    player.pause();
-    players.add(player);
-    player.setGain(-80);
-  }
-
+  Minim _minim = new Minim(this);
+  composer = new Composer(
+    new Composition[] {
+      new Composition(new Track[] {
+        new Track("mp3/RhapsodyinBlue/1.mp3", _minim),
+        new Track("mp3/RhapsodyinBlue/2.mp3", _minim),
+        new Track("mp3/RhapsodyinBlue/3.mp3", _minim),
+        new Track("mp3/RhapsodyinBlue/4.mp3", _minim),
+        new Track("mp3/RhapsodyinBlue/5.mp3", _minim),
+        new Track("mp3/RhapsodyinBlue/6.mp3", _minim),
+        new Track("mp3/RhapsodyinBlue/7.mp3", _minim),
+        new Track("mp3/RhapsodyinBlue/8.mp3", _minim)
+      }),
+      new Composition(new Track[] {
+        new Track("mp3/Bolero/1.mp3", _minim),
+        new Track("mp3/Bolero/2.mp3", _minim),
+        new Track("mp3/Bolero/3.mp3", _minim),
+        new Track("mp3/Bolero/4.mp3", _minim),
+        new Track("mp3/Bolero/5.mp3", _minim),
+        new Track("mp3/Bolero/6.mp3", _minim),
+        new Track("mp3/Bolero/7.mp3", _minim),
+        new Track("mp3/Bolero/8.mp3", _minim)
+      })
+  });
+  
   cp5 = new ControlP5(this);
   
   cp5.addButton("play")
@@ -131,6 +281,14 @@ void setup()
     .setRange(0, 100);
   cp5.getController("time").getCaptionLabel().setVisible(false);
   cp5.getController("time").getValueLabel().setVisible(false);
+  cp5.getController("time").onClick(new CallbackListener() {
+    public void controlEvent(CallbackEvent theEvent) {
+      Slider slider = (Slider)theEvent.getController();
+      Composition c = composer.current_composition();
+      c.seek((float)slider.getValue() / 100);
+    }
+  });
+  
 
   playbackTimeLabel = new Textlabel(cp5, "0:00", horizontal_position, vertical_position + 3, user_interface_size, user_interface_size);
   labels.add(playbackTimeLabel);
@@ -139,28 +297,12 @@ void setup()
   remainingTimeLabel = new Textlabel(cp5, "-0:00", user_interface_left_pane_width - user_interface_size * 2, vertical_position + 3, user_interface_size, user_interface_size);
   labels.add(remainingTimeLabel);
 
-  // draw progress line
-  // line(30, 20, 85, 75)
   breakInterfaceVerticalPosition();
-
-  // cp5.addCheckBox("loop_checkbox")
-  //   .setPosition(horizontal_position, vertical_position)
-  //   .setSize(user_interface_size, user_interface_size)
-  //   .addItem("loop", 0);
-  // updateInterfaceHorizontalPosition(user_interface_size);
-
-  // sensitivity
-  // cp5.addSlider("sensitivity")
-  //   .setPosition(0, vertical_position)
-  //   .setSize(200, user_interface_size)
-  //   .setRange(0, 7)
-  //   .setNumberOfTickMarks(8);
-  // updateInterfaceHorizontalPosition(200);
 
   // debug switch  
   Textlabel toggle_label = new Textlabel(cp5, "Override Sensor State", horizontal_position, vertical_position - 10, user_interface_size, user_interface_size);
   labels.add(toggle_label);
-  for (int i = 0; i < filenames.length; i++) {
+  for (int i = 0; i < number_of_tracks; i++) {
     String label = str(i);
     cp5.addToggle(label)
       .setValue(false)
@@ -170,7 +312,7 @@ void setup()
     cp5.getController(label).getCaptionLabel().align(ControlP5.CENTER, ControlP5.CENTER).setPaddingX(0);
   }
 
-  breakInterfaceVerticalPosition(user_interface_size * filenames.length);
+  breakInterfaceVerticalPosition(user_interface_size * number_of_tracks);
 
   // serial
   serial_ports = Serial.list();
@@ -193,6 +335,7 @@ void setup()
     .setColor(color(128))
     .setColorBackground(color(255, 100))
     .setColorForeground(color(255, 100));
+  consoleTextArea.scroll(1);
   cp5.addToggle("stop_console")
     .setValue(false)
     .setLabel("Stop Console")
@@ -205,11 +348,13 @@ void setup()
 
 public void play()
 {
-  printConsole("play");
-  for (int i = 0; i < players.size(); i++) {
-    AudioPlayer player = players.get(i);
-    player.loop();
-    player.setGain(-80);
+  if (composer.isPlaying()) {
+    printConsole("pause");
+    composer.pause();
+  }
+  else {
+    printConsole("play");
+    composer.start();
   }
 }
 
@@ -271,28 +416,27 @@ void updatePlayerState(int inByte)
     currentState[i] = false;
   }
   int flag = 0x01;
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < number_of_tracks; i++) {
     boolean touched = (flag & inByte) > 0;
     flag = flag << 1;
     currentState[i] = touched;
+  }
+}
 
-    int transitionDuration = 500;
-    AudioPlayer player = players.get(i);
+void reloadState()
+{
+  for (int i = 0; i < number_of_tracks; i++) {
+    Boolean touched = currentState[i];
+    Track t = composer.current_composition().track(i);
     if (touched) {
       // unmute
-      if (player.getGain() < 0) {
-        printConsole("unmute: " + str(i));
-        // player.unmute();
-        player.shiftGain(-80, 10, transitionDuration);
-      }
+      printConsole("unmute: " + str(i));
+      t.unmute();
     }
     else {
       // mute
-      if (player.getGain() >= 0) {
-        printConsole("mute: " + str(i));
-        // player.mute();
-        player.shiftGain(10, -80, transitionDuration);
-      }
+      printConsole("mute: " + str(i));
+      t.mute();
     }
   }
 }
@@ -318,14 +462,14 @@ void drawWave()
   int offset = 20;
   int wave_height = user_interface_size;
   int wave_position_y = vertical_position + user_interface_size / 2;
-  for (int i = 0; i < players.size(); i++) {
-    AudioPlayer player = players.get(i);
-    // for(int j = 0; j < player.bufferSize() - 1; j++) {
+  Track[] all_track = composer.current_composition().all_track();
+  for (int i = 0; i < all_track.length; i++) {
+    Track t = all_track[i];
     for(int j = 0; j < user_interface_left_pane_width - 1 - offset; j++) {
       stroke(65, 105, 225);
-      line(j + offset, wave_position_y + player.left.get(j) * wave_height + (wave_height * i), j + 1 + offset, wave_position_y + player.left.get(j + 1) * wave_height + (wave_height * i));
+      line(j + offset, wave_position_y + t.player.left.get(j) * wave_height + (wave_height * i), j + 1 + offset, wave_position_y + t.player.left.get(j + 1) * wave_height + (wave_height * i));
       stroke(255, 69, 0);
-      line(j + offset, wave_position_y + player.right.get(j) * wave_height + (wave_height * i), j + 1 + offset, wave_position_y + player.right.get(j + 1) * wave_height + (wave_height * i));
+      line(j + offset, wave_position_y + t.player.right.get(j) * wave_height + (wave_height * i), j + 1 + offset, wave_position_y + t.player.right.get(j + 1) * wave_height + (wave_height * i));
     }
   }
 }
@@ -341,7 +485,7 @@ boolean isTouching(int index)
 void drawSensorState()
 {
   // ellipse
-  for (int i = 0; i < filenames.length; i++) {
+  for (int i = 0; i < number_of_tracks; i++) {
     Toggle toggle = (Toggle)cp5.getController(str(i));
     if (toggle.getBooleanValue() == true || isTouching(i)) {
       float[] position = toggle.getPosition();
@@ -354,16 +498,21 @@ void drawSensorState()
 
 void updatePlaybackTime()
 {
-  AudioPlayer player = players.get(0);
-  float position = (float)player.position() / (float)player.length();
-  cp5.getController("time").setValue(position * 100);
+  Composition c = composer.current_composition();
+  int position = c.position();
 
-  int playbackTime = player.position() / 1000;
+  float playback_position = (float)position / (float)c.length();
+  Slider slider = (Slider)cp5.getController("time");
+  if (slider.isMousePressed() == false) {
+    slider.setValue(playback_position * 100);
+  }
+
+  int playbackTime = position / 1000;
   String playbackMin = String.format("%02d", playbackTime / 60);
   String playbackSec = String.format("%02d", playbackTime % 60);
   playbackTimeLabel.setText(playbackMin + ":" + playbackSec);
 
-  int remainingTime = (player.length() - player.position()) / 1000;
+  int remainingTime = (c.length() - position) / 1000;
   String remainingMin = String.format("%02d", remainingTime / 60);
   String remainingSec = String.format("%02d", remainingTime % 60);
   remainingTimeLabel.setText("-" + remainingMin + ":" + remainingSec);
@@ -379,15 +528,5 @@ void draw()
   updatePlaybackTime();
   drawWave();
   drawSensorState();
-}
- 
-void stop()
-{
-  for (int i = 0; i < players.size(); i++) {
-    AudioPlayer player = players.get(i);
-    player.close();
-  }
-  
-  minim.stop();
-  super.stop();
+  composer.update();
 }
