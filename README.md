@@ -20,3 +20,8 @@
 詳しくは動画資料を参照ください。
 
 URL:   https://youtu.be/sxSDEZ2X-sc
+
+## クレジット
+●音源制作
+せいぎのあおぢる（@AojiruOfJustice）
+http://seiginoaojiru.com/
